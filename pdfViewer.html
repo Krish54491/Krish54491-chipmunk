@@ -4,13 +4,25 @@
     <meta charset="UTF-8" />
     <title>PDF Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
 </head>
 <body>
 <canvas id="pdfCanvas" width="600" height="800"></canvas>
+<video id="video" style="display:none;" autoplay></video>
 <script>
     let pdfDoc = null;
     let pageNum = 1;
     let recognition;
+    let model = null;
+    let handClosed = false;
+    let handClosedStartTime = null;
+    let pageTurned = false;
+
+    async function loadModel() {
+        model = await handpose.load();
+    }
 
     function loadPDF(url) {
         const loadingTask = pdfjsLib.getDocument(url);
@@ -18,6 +30,7 @@
             pdfDoc = pdf;
             renderPage(pageNum);
             startVoiceRecognition();
+            startVideo();
         });
     }
 
@@ -62,11 +75,69 @@
         recognition.start();
     }
 
+    function startVideo() {
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+            video.srcObject = stream;
+            video.play();
+            detectHands();
+        });
+    }
+
+    async function detectHands() {
+        const video = document.getElementById('video');
+        if (model && video.readyState === 4) {
+            const predictions = await model.estimateHands(video);
+
+            if (predictions.length > 0) {
+                const landmarks = predictions[0].landmarks;
+                const changeInX = [];
+                const changeInY = [];
+
+                for (let i = 0; i < landmarks.length; i++) {
+                    const [x, y] = landmarks[i];
+                    if (i == 0) {
+                        changeInX.push(x);
+                        changeInY.push(y);
+                    } else if (i == landmarks.length - 1) {
+                        changeInX.push(x);
+                        changeInY.push(y);
+                    }
+                }
+
+                if (Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100) {
+                    if (!handClosed) {
+                        handClosed = true;
+                        handClosedStartTime = new Date().getTime();
+                    } else {
+                        const currentTime = new Date().getTime();
+                        if (currentTime - handClosedStartTime >= 500 && !pageTurned) {
+                            if (pageNum < pdfDoc.numPages) {
+                                pageNum++;
+                            } else {
+                                pageNum = 1;
+                            }
+                            renderPage(pageNum);
+                            console.log("closed, page turned");
+                            pageTurned = true;
+                        }
+                    }
+                } else {
+                    handClosed = false;
+                    pageTurned = false;
+                }
+            }
+        }
+        requestAnimationFrame(detectHands);
+    }
+
     window.addEventListener('message', function(event) {
         if (event.data.type === 'loadPDF') {
             loadPDF(event.data.url);
         }
     });
+
+    loadModel();
 </script>
 </body>
 </html>
