@@ -7,10 +7,35 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #pdfCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        #fullscreenButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-<canvas id="pdfCanvas" width="600" height="800"></canvas>
+<canvas id="pdfCanvas"></canvas>
 <video id="video" style="display:none;" autoplay></video>
+<button id="fullscreenButton">Fullscreen</button>
 <script>
     let pdfDoc = null;
     let pageNum = 1;
@@ -40,8 +65,9 @@
             const ctx = canvas.getContext('2d');
             const viewport = page.getViewport({ scale: 1 });
 
-            const scale = canvas.width / viewport.width;
-            const scaledViewport = page.getViewport({ scale: scale });
+            // Set the scale factor to improve resolution
+            const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height);
+            const scaledViewport = page.getViewport({ scale: scale * 2 }); // Increase scale for higher resolution
 
             canvas.height = scaledViewport.height;
             canvas.width = scaledViewport.width;
@@ -134,6 +160,41 @@
     window.addEventListener('message', function(event) {
         if (event.data.type === 'loadPDF') {
             loadPDF(event.data.url);
+        }
+    });
+
+    function toggleFullscreen() {
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            fullscreenButton.textContent = 'Unfullscreen';
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                fullscreenButton.textContent = 'Fullscreen';
+            }
+        }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        if (document.fullscreenElement) {
+            fullscreenButton.textContent = 'Unfullscreen';
+        } else {
+            fullscreenButton.textContent = 'Fullscreen';
+        }
+    });
+
+    document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
+
+    document.addEventListener('fullscreenchange', () => {
+        const video = document.getElementById('video');
+        if (document.fullscreenElement) {
+            video.style.width = '100%';
+            video.style.height = '100%';
+        } else {
+            video.style.width = '0';
+            video.style.height = '0';
         }
     });
 
