@@ -16,21 +16,27 @@
       justify-content: center;
       margin-bottom: 20px;
       text-align: center;
+      cursor: pointer;
     }
     #dropZone.dragover {
       border-color: #000;
+    }
+    #fileInput {
+      display: none;
     }
   </style>
 </head>
 <body>
 <div id="root"></div>
-<div id="dropZone">Drag and drop a PDF file here</div>
+<div id="dropZone">Drag and drop a PDF file here or click to select</div>
+<input type="file" id="fileInput" accept="application/pdf" />
 <button id="openPdfButton">Open PDF in New Window</button>
 <script type="module" src="/src/main.jsx"></script>
 <script>
   let fileURL = '';
 
   const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
 
   dropZone.addEventListener('dragover', (event) => {
     event.preventDefault();
@@ -45,13 +51,26 @@
     event.preventDefault();
     dropZone.classList.remove('dragover');
     const file = event.dataTransfer.files[0];
+    handleFile(file);
+  });
+
+  dropZone.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    handleFile(file);
+  });
+
+  function handleFile(file) {
     if (file && file.type === 'application/pdf') {
       fileURL = URL.createObjectURL(file);
       dropZone.textContent = `File "${file.name}" successfully dropped.`;
     } else {
       alert('Please drop a valid PDF file.');
     }
-  });
+  }
 
   function openPDFInNewWindow() {
     if (!fileURL) {
