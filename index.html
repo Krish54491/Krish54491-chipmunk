@@ -30,13 +30,18 @@
 <div id="root"></div>
 <div id="dropZone">Drag and drop a PDF file here or click to select</div>
 <input type="file" id="fileInput" accept="application/pdf" />
-<button id="openPdfButton">Open PDF in New Window</button>
+<div id="pdfControls" style="display: none;">
+  <button id="openPdfButton">Open PDF in New Window</button>
+  <div id="cameraPreview"></div>
+</div>
 <script type="module" src="/src/main.jsx"></script>
 <script>
   let fileURL = '';
 
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
+  const pdfControls = document.getElementById('pdfControls');
+  const openPdfButton = document.getElementById('openPdfButton');
 
   dropZone.addEventListener('dragover', (event) => {
     event.preventDefault();
@@ -67,6 +72,8 @@
     if (file && file.type === 'application/pdf') {
       fileURL = URL.createObjectURL(file);
       dropZone.textContent = `File "${file.name}" successfully dropped.`;
+      pdfControls.style.display = 'block';
+      window.dispatchEvent(new CustomEvent('pdfLoaded', { detail: true }));
     } else {
       alert('Please drop a valid PDF file.');
     }
@@ -82,9 +89,13 @@
     newWindow.addEventListener('load', function() {
       newWindow.postMessage({ type: 'loadPDF', url: fileURL }, '*');
     });
+
+    // Hide the drag-and-drop button and the "Open PDF in New Window" button
+    dropZone.style.display = 'none';
+    openPdfButton.style.display = 'none';
   }
 
-  document.getElementById('openPdfButton').addEventListener('click', openPDFInNewWindow);
+  openPdfButton.addEventListener('click', openPDFInNewWindow);
 </script>
 </body>
 </html>

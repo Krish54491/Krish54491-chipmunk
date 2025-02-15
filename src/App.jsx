@@ -6,6 +6,7 @@ const App = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [model, setModel] = useState(null);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
 
   useEffect(() => {
     const loadModel = async () => {
@@ -13,6 +14,18 @@ const App = () => {
       setModel(handposeModel);
     };
     loadModel();
+  }, []);
+
+  useEffect(() => {
+    const handlePdfLoaded = (event) => {
+      setPdfLoaded(event.detail);
+    };
+
+    window.addEventListener('pdfLoaded', handlePdfLoaded);
+
+    return () => {
+      window.removeEventListener('pdfLoaded', handlePdfLoaded);
+    };
   }, []);
 
   const startVideo = () => {
@@ -63,7 +76,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (model) {
+    if (model && pdfLoaded) {
       startVideo();
       videoRef.current.onloadeddata = () => {
         canvasRef.current.width = videoRef.current.videoWidth;
@@ -71,18 +84,18 @@ const App = () => {
         detectHands();
       };
     }
-  }, [model]);
+  }, [model, pdfLoaded]);
 
   return (
-    <>
-    <div className="relative w-640px h-480px">
-      <video ref={videoRef} className="size-full"/>
-      <canvas ref={canvasRef} className="size-full absolute top-0 left-0" />
-    </div>
-    
-  </>
+      <>
+        {pdfLoaded && (
+            <div className="relative w-640px h-480px">
+              <video ref={videoRef} className="size-full"/>
+              <canvas ref={canvasRef} className="size-full absolute top-0 left-0" />
+            </div>
+        )}
+      </>
   );
 };
 
 export default App;
-
