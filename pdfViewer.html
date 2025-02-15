@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+</head>
+<body>
+<canvas id="pdfCanvas" width="600" height="800"></canvas>
+<script>
+    let pdfDoc = null;
+    let pageNum = 1;
+
+    function loadPDF(url) {
+        const loadingTask = pdfjsLib.getDocument(url);
+        loadingTask.promise.then(function(pdf) {
+            pdfDoc = pdf;
+            renderPage(pageNum);
+            startScrolling();
+        });
+    }
+
+    function renderPage(num) {
+        pdfDoc.getPage(num).then(function(page) {
+            const canvas = document.getElementById('pdfCanvas');
+            const ctx = canvas.getContext('2d');
+            const viewport = page.getViewport({ scale: 1 });
+
+            const scale = canvas.width / viewport.width;
+            const scaledViewport = page.getViewport({ scale: scale });
+
+            canvas.height = scaledViewport.height;
+            canvas.width = scaledViewport.width;
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: scaledViewport
+            };
+            page.render(renderContext);
+        });
+    }
+
+    function startScrolling() {
+        setInterval(() => {
+            if (pageNum < pdfDoc.numPages) {
+                pageNum++;
+            } else {
+                pageNum = 1;
+            }
+            renderPage(pageNum);
+        }, 4000);
+    }
+
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'loadPDF') {
+            loadPDF(event.data.url);
+        }
+    });
+</script>
+</body>
+</html>

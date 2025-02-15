@@ -4,23 +4,39 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vite + React</title>
+  <title>Open and Scroll PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
 <input type="file" id="fileInput" accept="application/pdf" />
-<iframe id="pdfViewer" width="100%" height="600px"></iframe>
+<button id="openPdfButton">Open PDF in New Window</button>
 <script type="module" src="/src/main.jsx"></script>
 <script>
+  let fileURL = '';
+
   document.getElementById('fileInput').addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
-      const fileURL = URL.createObjectURL(file);
-      document.getElementById('pdfViewer').src = fileURL;
+      fileURL = URL.createObjectURL(file);
     } else {
       alert('Please select a valid PDF file.');
     }
   });
+
+  function openPDFInNewWindow() {
+    if (!fileURL) {
+      alert('Please select a PDF file first.');
+      return;
+    }
+
+    const newWindow = window.open('pdfViewer.html', '_blank');
+    newWindow.addEventListener('load', function() {
+      newWindow.postMessage({ type: 'loadPDF', url: fileURL }, '*');
+    });
+  }
+
+  document.getElementById('openPdfButton').addEventListener('click', openPDFInNewWindow);
 </script>
 </body>
 </html>
