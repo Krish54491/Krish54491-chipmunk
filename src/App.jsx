@@ -40,6 +40,7 @@ const App = () => {
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
             ctx.fillStyle = "red";
             ctx.fill();
+            console.log(x + " " + y)
           }
         });
       }
@@ -59,10 +60,13 @@ const App = () => {
   }, [model]);
 
   return (
-    <div>
-      <video ref={videoRef} style={{ width: "640px", height: "480px" }} />
-      <canvas ref={canvasRef} style={{ width: "640px", height: "480px" }} />
+    <>
+    <div className="relative w-640px h-480px">
+      <video ref={videoRef} className="size-full"/>
+      <canvas ref={canvasRef} className="size-full absolute top-0 left-0" />
     </div>
+    
+  </>
   );
 };
 
