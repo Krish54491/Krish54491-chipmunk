@@ -34,13 +34,27 @@ const App = () => {
         predictions.forEach((prediction) => {
           const landmarks = prediction.landmarks;
 
+          const changeInX = [];
+          const changeInY = [];
+
           for (let i = 0; i < landmarks.length; i++) {
             const [x, y] = landmarks[i];
+            if(i == 0){
+              changeInX.push(x);
+              changeInY.push(y);
+            } else if(i == landmarks.length - 1){
+              changeInX.push(x);
+              changeInY.push(y);
+            }
             ctx.beginPath();
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
             ctx.fillStyle = "red";
             ctx.fill();
-            console.log(x + " " + y)
+          }
+          if(Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100){
+            console.log("Closed")
+          } else {
+            console.log("Open")
           }
         });
       }
