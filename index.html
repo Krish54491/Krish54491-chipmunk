@@ -1,13 +1,26 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vite + React</title>
+</head>
+<body>
+<div id="root"></div>
+<input type="file" id="fileInput" accept="application/pdf" />
+<iframe id="pdfViewer" width="100%" height="600px"></iframe>
+<script type="module" src="/src/main.jsx"></script>
+<script>
+  document.getElementById('fileInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      const fileURL = URL.createObjectURL(file);
+      document.getElementById('pdfViewer').src = fileURL;
+    } else {
+      alert('Please select a valid PDF file.');
+    }
+  });
+</script>
+</body>
 </html>
