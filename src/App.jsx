@@ -1,107 +1,70 @@
 import React, { useEffect, useRef, useState } from "react";
-import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+import * as handpose from "@tensorflow-models/handpose";
+import "@tensorflow/tfjs-backend-webgl";
 
 const App = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [handLandmarker, setHandLandmarker] = useState(null);
-  const [runningMode, setRunningMode] = useState("IMAGE");
-  const [webcamRunning, setWebcamRunning] = useState(false);
+  const [model, setModel] = useState(null);
 
   useEffect(() => {
-    const createHandLandmarker = async () => {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-      );
-      const landmarker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-          delegate: "GPU",
-        },
-        runningMode: runningMode,
-        numHands: 2,
-      });
-      setHandLandmarker(landmarker);
+    const loadModel = async () => {
+      const handposeModel = await handpose.load();
+      setModel(handposeModel);
     };
-    createHandLandmarker();
+    loadModel();
   }, []);
 
-  const handleClick = async (event) => {
-    if (!handLandmarker) {
-      console.log("Wait for handLandmarker to load before clicking!");
-      return;
-    }
-
-    if (runningMode === "VIDEO") {
-      setRunningMode("IMAGE");
-      await handLandmarker.setOptions({ runningMode: "IMAGE" });
-    }
-
-    const handLandmarkerResult = handLandmarker.detect(event.target);
-    console.log(handLandmarkerResult.handednesses?.[0]?.[0]);
+  const startVideo = () => {
+    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+    });
   };
 
-  const enableCam = () => {
-    if (!handLandmarker) {
-      console.log("Wait! HandLandmarker not loaded yet.");
-      return;
-    }
+  const detectHands = async () => {
+    if (model && videoRef.current.readyState === 4) {
+      const video = videoRef.current;
+      const predictions = await model.estimateHands(video);
 
-    setWebcamRunning(!webcamRunning);
+      if (predictions.length > 0) {
+        const ctx = canvasRef.current.getContext("2d");
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        predictions.forEach((prediction) => {
+          const landmarks = prediction.landmarks;
+
+          for (let i = 0; i < landmarks.length; i++) {
+            const [x, y] = landmarks[i];
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "red";
+            ctx.fill();
+          }
+        });
+      }
+    }
+    requestAnimationFrame(detectHands);
   };
 
   useEffect(() => {
-    if (!webcamRunning || !videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext("2d");
-
-    const constraints = { video: true };
-    navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
-      video.srcObject = stream;
-      video.addEventListener("loadeddata", predictWebcam);
-    });
-
-    let lastVideoTime = -1;
-
-    const predictWebcam = async () => {
-      canvasElement.width = video.videoWidth;
-      canvasElement.height = video.videoHeight;
-      
-      if (runningMode === "IMAGE") {
-        setRunningMode("VIDEO");
-        await handLandmarker.setOptions({ runningMode: "VIDEO" });
-      }
-
-      let startTimeMs = performance.now();
-      if (lastVideoTime !== video.currentTime) {
-        lastVideoTime = video.currentTime;
-        const results = handLandmarker.detectForVideo(video, startTimeMs);
-        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        if (results.landmarks) {
-          for (const landmarks of results.landmarks) {
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-              color: "#00FF00",
-              lineWidth: 5,
-            });
-            drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
-          }
-        }
-      }
-      if (webcamRunning) {
-        requestAnimationFrame(predictWebcam);
-      }
-    };
-  }, [webcamRunning, handLandmarker]);
+    if (model) {
+      startVideo();
+      videoRef.current.onloadeddata = () => {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        detectHands();
+      };
+    }
+  }, [model]);
 
   return (
     <div>
-      <button onClick={enableCam}>{webcamRunning ? "DISABLE PREDICTIONS" : "ENABLE PREDICTIONS"}</button>
-      <video ref={videoRef} id="webcam" autoPlay playsInline></video>
-      <canvas ref={canvasRef} id="output_canvas"></canvas>
+      <video ref={videoRef} style={{ width: "640px", height: "480px" }} />
+      <canvas ref={canvasRef} style={{ width: "640px", height: "480px" }} />
     </div>
   );
 };
 
 export default App;
+
