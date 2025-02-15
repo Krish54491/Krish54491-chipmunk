@@ -48,7 +48,7 @@ const App = () => {
             }
             ctx.beginPath();
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = "red";
+            ctx.fillStyle = "white";
             ctx.fill();
           }
           if(Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100){
