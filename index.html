@@ -6,27 +6,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Open and Scroll PDF</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <style>
+    #dropZone {
+      width: 100%;
+      height: 200px;
+      border: 2px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    #dropZone.dragover {
+      border-color: #000;
+    }
+  </style>
 </head>
 <body>
 <div id="root"></div>
-<input type="file" id="fileInput" accept="application/pdf" />
+<div id="dropZone">Drag and drop a PDF file here</div>
 <button id="openPdfButton">Open PDF in New Window</button>
 <script type="module" src="/src/main.jsx"></script>
 <script>
   let fileURL = '';
 
-  document.getElementById('fileInput').addEventListener('change', function(event) {
-    const file = event.target.files[0];
+  const dropZone = document.getElementById('dropZone');
+
+  dropZone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = event.dataTransfer.files[0];
     if (file && file.type === 'application/pdf') {
       fileURL = URL.createObjectURL(file);
+      dropZone.textContent = `File "${file.name}" successfully dropped.`;
     } else {
-      alert('Please select a valid PDF file.');
+      alert('Please drop a valid PDF file.');
     }
   });
 
   function openPDFInNewWindow() {
     if (!fileURL) {
-      alert('Please select a PDF file first.');
+      alert('Please select or drop a PDF file first.');
       return;
     }
 
