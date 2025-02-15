@@ -52,10 +52,10 @@ const App = () => {
 
           for (let i = 0; i < landmarks.length; i++) {
             const [x, y] = landmarks[i];
-            if(i == 0){
+            if(i === 0){
               changeInX.push(x);
               changeInY.push(y);
-            } else if(i == landmarks.length - 1){
+            } else if(i === landmarks.length - 1){
               changeInX.push(x);
               changeInY.push(y);
             }
@@ -65,9 +65,9 @@ const App = () => {
             ctx.fill();
           }
           if(Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100){
-            console.log("Closed")
+            console.log("Closed");
           } else {
-            console.log("Open")
+            console.log("Open");
           }
         });
       }
@@ -75,15 +75,26 @@ const App = () => {
     requestAnimationFrame(detectHands);
   };
 
+  const resizeCanvas = () => {
+    if (videoRef.current && canvasRef.current) {
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+    }
+  };
+
   useEffect(() => {
     if (model && pdfLoaded) {
       startVideo();
       videoRef.current.onloadeddata = () => {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
+        resizeCanvas();
         detectHands();
       };
+      window.addEventListener('resize', resizeCanvas);
     }
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
   }, [model, pdfLoaded]);
 
   return (
