@@ -10,13 +10,14 @@
 <script>
     let pdfDoc = null;
     let pageNum = 1;
+    let recognition;
 
     function loadPDF(url) {
         const loadingTask = pdfjsLib.getDocument(url);
         loadingTask.promise.then(function(pdf) {
             pdfDoc = pdf;
             renderPage(pageNum);
-            startScrolling();
+            startVoiceRecognition();
         });
     }
 
@@ -40,15 +41,25 @@
         });
     }
 
-    function startScrolling() {
-        setInterval(() => {
-            if (pageNum < pdfDoc.numPages) {
-                pageNum++;
-            } else {
-                pageNum = 1;
+    function startVoiceRecognition() {
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+            if (transcript === 'next slide') {
+                if (pageNum < pdfDoc.numPages) {
+                    pageNum++;
+                } else {
+                    pageNum = 1;
+                }
+                renderPage(pageNum);
             }
-            renderPage(pageNum);
-        }, 4000);
+        };
+
+        recognition.start();
     }
 
     window.addEventListener('message', function(event) {
