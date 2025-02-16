@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -35,10 +35,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 </head>
 <body>
+<p id="subtitles" style="z-index: 5;position: fixed; color:black; text-align: center; align-items: center;"></p>
 <canvas id="pdfCanvas"></canvas>
 <video id="video" autoplay></video>
 <button id="fullscreenButton">Fullscreen</button>
 <script>
+    const openerWindow = window.opener;
     let mediaRecorder;
     let recordedChunks = [];
     let pdfDoc = null;
@@ -50,7 +52,6 @@
     let pageTurned = false;
     let backKeyword = 'backwards';
     let frontKeyword = 'next';
-
     async function loadModel() {
         model = await handpose.load();
     }
@@ -99,28 +100,31 @@
 
         recognition.onerror = function(event) {
             console.error('Voice recognition error:', event.error);
+            startVoiceRecognition()
         };
 
         recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
             console.log('Voice command received:', transcript);
-            if (transcript.includes(frontKeyword)) {
+            if ((transcript.toLowerCase()).includes(frontKeyword)) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
+                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                 } else {
                     pageNum = 1;
                 }
                 renderPage(pageNum);
-            } else if (transcript.includes(backKeyword)) {
+            } else if ((transcript.toLowerCase()).includes(backKeyword)) {
                 if (pageNum > 1) {
                     pageNum--;
+                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                 } else {
                     pageNum = pdfDoc.numPages;
                 }
                 renderPage(pageNum);
             }
+            document.getElementById('subtitles').textContent = transcript;
         };
-
         recognition.start();
         console.log('Voice recognition started.');
     }
@@ -188,6 +192,7 @@
                         if (currentTime - handClosedStartTime >= 500 && !pageTurned) {
                             if (pageNum < pdfDoc.numPages) {
                                 pageNum++;
+                                openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                             } else {
                                 pageNum = 1;
                             }
