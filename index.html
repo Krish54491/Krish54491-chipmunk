@@ -8,6 +8,9 @@
   <title>Open and Scroll PDF</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
   <style>
+    body {
+      font-family: "Pixel Operator Mono 8 Bold", "sans-serif";
+    }
     #dropZone {
       width: 600px;
       height: 400px;
@@ -16,7 +19,6 @@
       display: flex;
       flex-direction: column;
       color: rgb(218, 107, 174);
-      font-family: "Pixel Operator Mono 8 Bold", "sans-serif";
       align-items: center;
       justify-content: center;
       margin-bottom: 20px;
@@ -33,7 +35,10 @@
       display: none;
     }
     .camera-outline {
-      border: 2px rgb(218, 107, 174) dashed; width:640px; height: 480px
+      border: 2px rgb(218, 107, 174) dashed; width:640px; height: 480px;
+      background-color: rgba(0, 0, 0, .3);
+      mix-blend-mode: multiply;
+      transform: scale(-1, 1);
     }
   </style>
 </head>
@@ -43,15 +48,15 @@
     <div id="header-image" style="background-image: url('/header.png');width:820px;height:171px"></div>
     <div id="instructions" style="display:flex; align-items: center; justify-content: center;gap:30px;" hidden>
       <div style="background-image: url('/hand-instructions.png');width:508px;height:207px;"></div>
-      <div style="background-image: url('/speech-settings.png');width:491px;height:260px">
-        <input id="back-keyword" type="text" name="back" value="backwards" style="width: 120px;position: relative;top: 45px;left: 50px;" />
-        <input id="front-keyword" type="text" name="front" value="next" style="width: 114px;position: relative;top: 39px;left: 205px;" />
+      <div style="background-image: url('/speech-settings.png');width:491px;height:260px;font-size:12px">
+        <input id="back-keyword" type="text" name="back" value="backwards" style="width: 120px;position: relative;top: 50px;left: 50px;" />
+        <input id="front-keyword" type="text" name="front" value="next" style="width: 114px;position: relative;top: 44px;left: 205px;" />
       </div>
     </div>
   </div>
   <div id="content" style="display:flex; align-items: center; justify-content: center;gap:30px;">
     <div id="root"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="uploadOptions" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
       <div id="dropZone">
         <div style="background-image:url('/pdf.png');width:158px;height:124px;margin-bottom:10px"></div>
         Drag and drop a PDF file here or click to select
@@ -60,6 +65,13 @@
       <div id="pdfControls" style="display: none;">
         <button id="openPdfButton">Open PDF in New Window</button>
       </div>
+
+    </div>
+    <div id="pdf-previews" style="display:flex; flex-direction:column;align-items:flex-start; justify-content: center; gap:20px" hidden>
+      <p>CURRENT SLIDE:</p>
+      <canvas id="currentpdf" ></canvas>
+      <p>NEXT SLIDE:</p>
+      <canvas id="nextpage"></canvas>
     </div>
   </div>
 </div>
@@ -67,7 +79,9 @@
   <script type="module" src="/src/main.jsx"></script>
   <script>
     let fileURL = '';
+    let pdfDoc = null;
     let pdfSelectedImg = new Image();
+    let pageNum = 1;
     pdfSelectedImg.src = '/pdf-selected.png';
 
     const dropZone = document.getElementById('dropZone');
@@ -116,6 +130,55 @@
       }
     }
 
+    function loadPDF() {
+      const loadingTask = pdfjsLib.getDocument(fileURL);
+      loadingTask.promise.then(function(pdf) {
+        pdfDoc = pdf;
+        renderPage(pageNum);
+      });
+    }
+
+    function renderPage(num) {
+      document.getElementById('pdf-previews').hidden = false;
+
+      pdfDoc.getPage(num).then(function(page) {
+        const canvas = document.getElementById('currentpdf');
+        const ctx = canvas.getContext('2d');
+        const viewport = page.getViewport({ scale: 1 });
+
+        // Set the scale factor to improve resolution
+        const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height);
+        const scaledViewport = page.getViewport({ scale: scale * 0.125 }); // Increase scale for higher resolution
+
+        canvas.height = scaledViewport.height;
+        canvas.width = scaledViewport.width;
+
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: scaledViewport
+        };
+        page.render(renderContext);
+      });
+      pdfDoc.getPage(num + 1).then(function(page) {
+        const canvas = document.getElementById('nextpage');
+        const ctx = canvas.getContext('2d');
+        const viewport = page.getViewport({ scale: 1 });
+
+        // Set the scale factor to improve resolution
+        const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height);
+        const scaledViewport = page.getViewport({ scale: scale * 0.3 }); // Increase scale for higher resolution
+
+        canvas.height = scaledViewport.height;
+        canvas.width = scaledViewport.width;
+
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: scaledViewport
+        };
+        page.render(renderContext);
+      });
+    }
+
     function openPDFInNewWindow() {
       if (!fileURL) {
         alert('Please select or drop a PDF file first.');
@@ -133,8 +196,8 @@
       });
 
       // Hide the drag-and-drop button and the "Open PDF in New Window" button
-      dropZone.style.display = 'none';
-      openPdfButton.style.display = 'none';
+      document.getElementById('uploadOptions').style.display = 'none';
+      loadPDF();
     }
 
     function sendKeywordUpdate() {
@@ -145,6 +208,12 @@
       }
     }
 
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'pageTurned') {
+        pageNum = event.data.pageNum || pageNum;
+        renderPage(pageNum);
+      }
+    });
 
     openPdfButton.addEventListener('click', openPDFInNewWindow);
   </script>
