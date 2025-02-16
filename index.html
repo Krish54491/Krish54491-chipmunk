@@ -90,6 +90,43 @@
     const openPdfButton = document.getElementById('openPdfButton');
     let newWindow = null;
 
+    let screenRecorder;
+    let screenRecordedChunks = [];
+
+    function startScreenRecording() {
+      navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
+        screenRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        screenRecorder.ondataavailable = function(event) {
+          if (event.data.size > 0) {
+            screenRecordedChunks.push(event.data);
+          }
+        };
+
+        screenRecorder.onstop = function() {
+          const blob = new Blob(screenRecordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = 'screen.mp4';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+        };
+
+        screenRecorder.start();
+      });
+    }
+
+    function stopScreenRecording() {
+      if (screenRecorder && screenRecorder.state !== 'inactive') {
+        screenRecorder.stop();
+      }
+    }
+
+    window.addEventListener('beforeunload', stopScreenRecording);
+
     dropZone.addEventListener('dragover', (event) => {
       event.preventDefault();
       dropZone.classList.add('dragover');
@@ -195,6 +232,9 @@
         newWindow.postMessage({ type: 'loadPDF', url: fileURL, backKeyword, frontKeyword }, '*');
       });
 
+      // Start screen recording
+      startScreenRecording();
+
       // Hide the drag-and-drop button and the "Open PDF in New Window" button
       document.getElementById('uploadOptions').style.display = 'none';
       loadPDF();
@@ -212,6 +252,8 @@
       if (event.data.type === 'pageTurned') {
         pageNum = event.data.pageNum || pageNum;
         renderPage(pageNum);
+      } else if (event.data.type === 'pdfViewerClosed') {
+        stopScreenRecording();
       }
     });
 

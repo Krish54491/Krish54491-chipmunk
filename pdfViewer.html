@@ -260,6 +260,7 @@
 
     loadModel();
     window.addEventListener('beforeunload', function() {
+        opener.postMessage({ type: 'pdfViewerClosed' }, '*');
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
