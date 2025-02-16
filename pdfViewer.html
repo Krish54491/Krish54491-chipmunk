@@ -38,6 +38,7 @@
 <video id="video" style="display:none;" autoplay></video>
 <button id="fullscreenButton">Fullscreen</button>
 <script>
+    const openerWindow = window.opener;
     let pdfDoc = null;
     let pageNum = 1;
     let recognition;
@@ -104,6 +105,7 @@
             if ((transcript.toLowerCase()).includes(frontKeyword)) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
+                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                 } else {
                     pageNum = 1;
                 }
@@ -111,6 +113,7 @@
             } else if ((transcript.toLowerCase()).includes(backKeyword)) {
                 if (pageNum > 1) {
                     pageNum--;
+                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                 } else {
                     pageNum = pdfDoc.numPages;
                 }
@@ -161,6 +164,7 @@
                         if (currentTime - handClosedStartTime >= 500 && !pageTurned) {
                             if (pageNum < pdfDoc.numPages) {
                                 pageNum++;
+                                openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
                             } else {
                                 pageNum = 1;
                             }
