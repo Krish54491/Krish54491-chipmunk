@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.png" />
   <link href="https://db.onlinewebfonts.com/c/8b859c7eb82781c80acbddf2af5ade39?family=Pixel+Operator+Mono+8+Bold" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Open and Scroll PDF</title>
@@ -22,34 +22,46 @@
       margin-bottom: 20px;
       text-align: center;
     }
+    #dropZone:hover {
+      background-color: rgb(255, 240, 215);
+      cursor: pointer;
+    }
     #dropZone.dragover {
       border-color: #000;
     }
     #fileInput {
       display: none;
     }
+    .camera-outline {
+      border: 2px rgb(218, 107, 174) dashed; width:640px; height: 480px
+    }
   </style>
 </head>
 <body style="background: linear-gradient(rgb(255,192,203), rgb(249, 223, 201));">
-  <div style="width:100vw; height:100vh;display:flex; align-items: center; justify-content: center;flex-direction: column;">
-    <div style="display:flex;gap:30px;">
-      <div id="root"></div>
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <div id="dropZone">
-          <div style="background-image:url('/pdf.png');width:158px;height:124px;margin-bottom:10px"></div>
-          Drag and drop a PDF file here or click to select
-        </div>
-        <input type="file" id="fileInput" accept="application/pdf" />
-        <div id="pdfControls" style="display: none;">
-          <button id="openPdfButton">Open PDF in New Window</button>
-        </div>
+<div style="display:flex;flex-direction: column;align-items: center;justify-content: start;width:100vw;height:100vh;">
+  <div id="header" style="display:flex; align-items: center; justify-content: center;width:100%;margin-top:30px;margin-bottom:30px;">
+    <div style="background-image: url('/header.png');width:820px;height:171px"></div>
+  </div>
+  <div id="content" style="display:flex; align-items: center; justify-content: center;gap:30px;">
+    <div id="root"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <div id="dropZone">
+        <div style="background-image:url('/pdf.png');width:158px;height:124px;margin-bottom:10px"></div>
+        Drag and drop a PDF file here or click to select
+      </div>
+      <input type="file" id="fileInput" accept="application/pdf" />
+      <div id="pdfControls" style="display: none;">
+        <button id="openPdfButton">Open PDF in New Window</button>
       </div>
     </div>
-  </div>>
+  </div>
+</div>
 
   <script type="module" src="/src/main.jsx"></script>
   <script>
     let fileURL = '';
+    let pdfSelectedImg = new Image();
+    pdfSelectedImg.src = '/pdf-selected.png';
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -84,7 +96,9 @@
     function handleFile(file) {
       if (file && file.type === 'application/pdf') {
         fileURL = URL.createObjectURL(file);
-        dropZone.textContent = `File "${file.name}" successfully dropped.`;
+        dropZone.innerHTML = `"${file.name}" <div id="lilchipmunk" style="width:80px;height:63px;margin-bottom:10px"></div>`;
+        document.getElementById('lilchipmunk').style.backgroundImage = `url(${pdfSelectedImg.src})`;
+        document.getElementById('root').classList.add('camera-outline');
         pdfControls.style.display = 'block';
         window.dispatchEvent(new CustomEvent('pdfLoaded', { detail: true }));
       } else {
