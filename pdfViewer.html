@@ -1,7 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -31,12 +32,15 @@
             cursor: pointer;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 </head>
 <body>
 <canvas id="pdfCanvas"></canvas>
-<video id="video" style="display:none;" autoplay></video>
+<video id="video" autoplay></video>
 <button id="fullscreenButton">Fullscreen</button>
 <script>
+    let mediaRecorder;
+    let recordedChunks = [];
     let pdfDoc = null;
     let pageNum = 1;
     let recognition;
@@ -123,10 +127,34 @@
 
     function startVideo() {
         const video = document.getElementById('video');
+
         navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
             video.srcObject = stream;
             video.play();
             detectHands();
+
+            const combinedStream = new MediaStream([...stream.getTracks()]);
+            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'camera.mp4';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+
+            mediaRecorder.start();
         });
     }
 
@@ -224,6 +252,13 @@
     });
 
     loadModel();
+    window.addEventListener('beforeunload', function() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    });
+
+    startVideo();
 </script>
 </body>
 </html>
