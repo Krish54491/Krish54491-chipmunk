@@ -107,7 +107,7 @@
                     pageNum = 1;
                 }
                 renderPage(pageNum);
-            } else if (transcript === backKeyword) {
+            } else if (transcript.includes(backKeyword)) {
                 if (pageNum > 1) {
                     pageNum--;
                 } else {
