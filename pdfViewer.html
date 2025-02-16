@@ -33,6 +33,7 @@
     </style>
 </head>
 <body>
+<p id="subtitles" style="z-index: 5;position: fixed; color:black; text-align: center; align-items: center;"></p>
 <canvas id="pdfCanvas"></canvas>
 <video id="video" style="display:none;" autoplay></video>
 <button id="fullscreenButton">Fullscreen</button>
@@ -46,7 +47,6 @@
     let pageTurned = false;
     let backKeyword = 'backwards';
     let frontKeyword = 'next';
-
     async function loadModel() {
         model = await handpose.load();
     }
@@ -95,6 +95,7 @@
 
         recognition.onerror = function(event) {
             console.error('Voice recognition error:', event.error);
+            startVoiceRecognition()
         };
 
         recognition.onresult = function(event) {
@@ -115,8 +116,8 @@
                 }
                 renderPage(pageNum);
             }
+            document.getElementById('subtitles').textContent = transcript;
         };
-
         recognition.start();
         console.log('Voice recognition started.');
     }
