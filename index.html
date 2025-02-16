@@ -40,7 +40,14 @@
 <body style="background: linear-gradient(rgb(255,192,203), rgb(249, 223, 201));">
 <div style="display:flex;flex-direction: column;align-items: center;justify-content: start;width:100vw;height:100vh;">
   <div id="header" style="display:flex; align-items: center; justify-content: center;width:100%;margin-top:30px;margin-bottom:30px;">
-    <div style="background-image: url('/header.png');width:820px;height:171px"></div>
+    <div id="header-image" style="background-image: url('/header.png');width:820px;height:171px"></div>
+    <div id="instructions" style="display:flex; align-items: center; justify-content: center;gap:30px;" hidden>
+      <div style="background-image: url('/hand-instructions.png');width:508px;height:207px;"></div>
+      <div style="background-image: url('/speech-settings.png');width:491px;height:260px">
+        <input id="back-keyword" type="text" name="back" value="backwards" style="width: 120px;position: relative;top: 45px;left: 50px;" />
+        <input id="front-keyword" type="text" name="front" value="next slide" style="width: 114px;position: relative;top: 39px;left: 205px;" />
+      </div>
+    </div>
   </div>
   <div id="content" style="display:flex; align-items: center; justify-content: center;gap:30px;">
     <div id="root"></div>
@@ -67,6 +74,7 @@
     const fileInput = document.getElementById('fileInput');
     const pdfControls = document.getElementById('pdfControls');
     const openPdfButton = document.getElementById('openPdfButton');
+    let newWindow = null;
 
     dropZone.addEventListener('dragover', (event) => {
       event.preventDefault();
@@ -99,6 +107,8 @@
         dropZone.innerHTML = `"${file.name}" <div id="lilchipmunk" style="width:80px;height:63px;margin-bottom:10px"></div>`;
         document.getElementById('lilchipmunk').style.backgroundImage = `url(${pdfSelectedImg.src})`;
         document.getElementById('root').classList.add('camera-outline');
+        document.getElementById('instructions').hidden = false;
+        document.getElementById('header-image').hidden = true;
         pdfControls.style.display = 'block';
         window.dispatchEvent(new CustomEvent('pdfLoaded', { detail: true }));
       } else {
@@ -112,15 +122,29 @@
         return;
       }
 
-      const newWindow = window.open('pdfViewer.html', '_blank');
+      const backKeyword = document.getElementById('back-keyword').value;
+      const frontKeyword = document.getElementById('front-keyword').value;
+      document.getElementById('back-keyword').addEventListener('input', sendKeywordUpdate);
+      document.getElementById('front-keyword').addEventListener('input', sendKeywordUpdate);
+
+      newWindow = window.open('pdfViewer.html', '_blank');
       newWindow.addEventListener('load', function() {
-        newWindow.postMessage({ type: 'loadPDF', url: fileURL }, '*');
+        newWindow.postMessage({ type: 'loadPDF', url: fileURL, backKeyword, frontKeyword }, '*');
       });
 
       // Hide the drag-and-drop button and the "Open PDF in New Window" button
       dropZone.style.display = 'none';
       openPdfButton.style.display = 'none';
     }
+
+    function sendKeywordUpdate() {
+      if (newWindow) {
+        const backKeyword = document.getElementById('back-keyword').value;
+        const frontKeyword = document.getElementById('front-keyword').value;
+        newWindow.postMessage({ type: 'updateKeywords', backKeyword, frontKeyword }, '*');
+      }
+    }
+
 
     openPdfButton.addEventListener('click', openPDFInNewWindow);
   </script>

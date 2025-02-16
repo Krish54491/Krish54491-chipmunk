@@ -44,6 +44,8 @@
     let handClosed = false;
     let handClosedStartTime = null;
     let pageTurned = false;
+    let backKeyword = 'backwards';
+    let frontKeyword = 'next';
 
     async function loadModel() {
         model = await handpose.load();
@@ -80,6 +82,7 @@
         });
     }
 
+
     function startVoiceRecognition() {
         recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'en-US';
@@ -97,14 +100,14 @@
         recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
             console.log('Voice command received:', transcript);
-            if (transcript === 'next') {
+            if (transcript === frontKeyword) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
                 } else {
                     pageNum = 1;
                 }
                 renderPage(pageNum);
-            } else if (transcript === 'backwards') {
+            } else if (transcript === backKeyword) {
                 if (pageNum > 1) {
                     pageNum--;
                 } else {
@@ -177,6 +180,11 @@
     window.addEventListener('message', function(event) {
         if (event.data.type === 'loadPDF') {
             loadPDF(event.data.url);
+            backKeyword = event.data.backKeyword || backKeyword;
+            frontKeyword = event.data.frontKeyword || frontKeyword;
+        } else if (event.data.type === 'updateKeywords') {
+            backKeyword = event.data.backKeyword || backKeyword;
+            frontKeyword = event.data.frontKeyword || frontKeyword;
         }
     });
 
