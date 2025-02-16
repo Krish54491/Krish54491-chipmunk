@@ -16,10 +16,12 @@
             height: 100%;
             overflow: hidden;
         }
+
         #pdfCanvas {
             width: 100%;
             height: 100%;
         }
+
         #fullscreenButton {
             position: absolute;
             bottom: 10px;
@@ -54,13 +56,14 @@
     let pageTurned = false;
     let backKeyword = 'backwards';
     let frontKeyword = 'next';
+
     async function loadModel() {
         model = await handpose.load();
     }
 
     function loadPDF(url) {
         const loadingTask = pdfjsLib.getDocument(url);
-        loadingTask.promise.then(function(pdf) {
+        loadingTask.promise.then(function (pdf) {
             pdfDoc = pdf;
             renderPage(pageNum);
             startVoiceRecognition();
@@ -69,14 +72,14 @@
     }
 
     function renderPage(num) {
-        pdfDoc.getPage(num).then(function(page) {
+        pdfDoc.getPage(num).then(function (page) {
             const canvas = document.getElementById('pdfCanvas');
             const ctx = canvas.getContext('2d');
-            const viewport = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({scale: 1});
 
             // Set the scale factor to improve resolution
             const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height);
-            const scaledViewport = page.getViewport({ scale: scale * 2 }); // Increase scale for higher resolution
+            const scaledViewport = page.getViewport({scale: scale * 2}); // Increase scale for higher resolution
 
             canvas.height = scaledViewport.height;
             canvas.width = scaledViewport.width;
@@ -96,22 +99,22 @@
         recognition.continuous = true;
         recognition.interimResults = false;
 
-        recognition.onstart = function() {
+        recognition.onstart = function () {
             console.log('Voice recognition started.');
         };
 
-        recognition.onerror = function(event) {
+        recognition.onerror = function (event) {
             console.error('Voice recognition error:', event.error);
             startVoiceRecognition()
         };
 
-        recognition.onresult = function(event) {
+        recognition.onresult = function (event) {
             const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
             console.log('Voice command received:', transcript);
             if ((transcript.toLowerCase()).includes(frontKeyword)) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
-                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
+                    openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
                 } else {
                     pageNum = 1;
                 }
@@ -119,7 +122,7 @@
             } else if ((transcript.toLowerCase()).includes(backKeyword)) {
                 if (pageNum > 1) {
                     pageNum--;
-                    openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
+                    openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
                 } else {
                     pageNum = pdfDoc.numPages;
                 }
@@ -134,22 +137,22 @@
     function startVideo() {
         const video = document.getElementById('video');
 
-        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+        navigator.mediaDevices.getUserMedia({video: true}).then((stream) => {
             video.srcObject = stream;
             video.play();
             detectHands();
 
             const combinedStream = new MediaStream([...stream.getTracks()]);
-            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+            mediaRecorder = new MediaRecorder(combinedStream, {mimeType: 'video/webm'});
 
-            mediaRecorder.ondataavailable = function(event) {
+            mediaRecorder.ondataavailable = function (event) {
                 if (event.data.size > 0) {
                     recordedChunks.push(event.data);
                 }
             };
 
-            mediaRecorder.onstop = function() {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            mediaRecorder.onstop = function () {
+                const blob = new Blob(recordedChunks, {type: 'video/webm'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -194,7 +197,7 @@
                         if (currentTime - handClosedStartTime >= 500 && !pageTurned) {
                             if (pageNum < pdfDoc.numPages) {
                                 pageNum++;
-                                openerWindow.postMessage({ type: 'pageTurned', pageNum }, '*');
+                                openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
                             } else {
                                 pageNum = 1;
                             }
@@ -212,7 +215,7 @@
         requestAnimationFrame(detectHands);
     }
 
-    window.addEventListener('message', function(event) {
+    window.addEventListener('message', function (event) {
         if (event.data.type === 'loadPDF') {
             loadPDF(event.data.url);
             backKeyword = event.data.backKeyword || backKeyword;
@@ -259,8 +262,8 @@
     });
 
     loadModel();
-    window.addEventListener('beforeunload', function() {
-        opener.postMessage({ type: 'pdfViewerClosed' }, '*');
+    window.addEventListener('beforeunload', function () {
+        opener.postMessage({type: 'pdfViewerClosed'}, '*');
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
