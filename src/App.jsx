@@ -100,10 +100,14 @@ const App = () => {
   return (
       <>
         {pdfLoaded && (
-            <div className="relative w-640px h-480px">
+            <>
+              <div style={{ backgroundImage: "url('/loading.png')", width: "139px", height: "143px", top: "50%", position: "absolute", left: "50%", transform: "translate(-50%, -50%)" }}></div>
+              <div className="relative w-640px h-480px">
               <video ref={videoRef} className="size-full"/>
               <canvas ref={canvasRef} className="size-full absolute top-0 left-0" />
             </div>
+
+            </>
         )}
       </>
   );
