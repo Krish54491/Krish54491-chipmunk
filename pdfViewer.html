@@ -100,14 +100,14 @@
         recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
             console.log('Voice command received:', transcript);
-            if (transcript.includes(frontKeyword)) {
+            if ((transcript.toLowerCase()).includes(frontKeyword)) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
                 } else {
                     pageNum = 1;
                 }
                 renderPage(pageNum);
-            } else if (transcript.includes(backKeyword)) {
+            } else if ((transcript.toLowerCase()).includes(backKeyword)) {
                 if (pageNum > 1) {
                     pageNum--;
                 } else {
