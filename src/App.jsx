@@ -64,11 +64,11 @@ const App = () => {
             ctx.fillStyle = "white";
             ctx.fill();
           }
-          if(Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100){
-            console.log("Closed");
-          } else {
-            console.log("Open");
-          }
+          //if(Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100){
+            //console.log("Closed");
+          //} else {
+            //console.log("Open");
+          //}
         });
       }
     }

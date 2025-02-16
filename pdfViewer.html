@@ -97,7 +97,7 @@
         recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
             console.log('Voice command received:', transcript);
-            if (transcript === 'next') {
+            if (transcript.includes('next')) {
                 if (pageNum < pdfDoc.numPages) {
                     pageNum++;
                 } else {
