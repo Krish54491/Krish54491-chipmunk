@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #pdfCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #fullscreenButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+</head>
+<body>
+<div style="display:flex;justify-content: center;width: 100vw;">
+    <p id="subtitles" style="z-index: 5;position: fixed; color:black; text-align: center; justify-items: center;"></p>
+</div>
+<canvas id="pdfCanvas"></canvas>
+<video id="video" autoplay></video>
+<button id="fullscreenButton">Fullscreen</button>
+<script>
+    const openerWindow = window.opener;
+    let mediaRecorder;
+    let recordedChunks = [];
+    let pdfDoc = null;
+    let pageNum = 1;
+    let recognition;
+    let model = null;
+    let handClosed = false;
+    let handClosedStartTime = null;
+    let pageTurned = false;
+    let backKeyword = 'backwards';
+    let frontKeyword = 'next';
+
+    async function loadModel() {
+        model = await handpose.load();
+    }
+
+    function loadPDF(url) {
+        const loadingTask = pdfjsLib.getDocument(url);
+        loadingTask.promise.then(function (pdf) {
+            pdfDoc = pdf;
+            renderPage(pageNum);
+            startVoiceRecognition();
+            startVideo();
+        });
+    }
+
+    function renderPage(num) {
+        pdfDoc.getPage(num).then(function (page) {
+            const canvas = document.getElementById('pdfCanvas');
+            const ctx = canvas.getContext('2d');
+            const viewport = page.getViewport({scale: 1});
+
+            // Set the scale factor to improve resolution
+            const scale = Math.min(window.innerWidth / viewport.width, window.innerHeight / viewport.height);
+            const scaledViewport = page.getViewport({scale: scale * 2}); // Increase scale for higher resolution
+
+            canvas.height = scaledViewport.height;
+            canvas.width = scaledViewport.width;
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: scaledViewport
+            };
+            page.render(renderContext);
+        });
+    }
+
+
+    function startVoiceRecognition() {
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        recognition.onstart = function () {
+            console.log('Voice recognition started.');
+        };
+
+        recognition.onerror = function (event) {
+            console.error('Voice recognition error:', event.error);
+            startVoiceRecognition()
+        };
+
+        recognition.onresult = function (event) {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+            console.log('Voice command received:', transcript);
+            if ((transcript.toLowerCase()).includes(frontKeyword)) {
+                if (pageNum < pdfDoc.numPages) {
+                    pageNum++;
+                    openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
+                } else {
+                    pageNum = 1;
+                }
+                renderPage(pageNum);
+            } else if ((transcript.toLowerCase()).includes(backKeyword)) {
+                if (pageNum > 1) {
+                    pageNum--;
+                    openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
+                } else {
+                    pageNum = pdfDoc.numPages;
+                }
+                renderPage(pageNum);
+            }
+            document.getElementById('subtitles').textContent = transcript;
+        };
+        recognition.start();
+        console.log('Voice recognition started.');
+    }
+
+    function startVideo() {
+        const video = document.getElementById('video');
+
+        navigator.mediaDevices.getUserMedia({video: true}).then((stream) => {
+            video.srcObject = stream;
+            video.play();
+            detectHands();
+
+            const combinedStream = new MediaStream([...stream.getTracks()]);
+            mediaRecorder = new MediaRecorder(combinedStream, {mimeType: 'video/webm'});
+
+            mediaRecorder.ondataavailable = function (event) {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = function () {
+                const blob = new Blob(recordedChunks, {type: 'video/webm'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'camera.mp4';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+
+            mediaRecorder.start();
+        });
+    }
+
+    async function detectHands() {
+        const video = document.getElementById('video');
+        if (model && video.readyState === 4) {
+            const predictions = await model.estimateHands(video);
+
+            if (predictions.length > 0) {
+                const landmarks = predictions[0].landmarks;
+                const changeInX = [];
+                const changeInY = [];
+
+                for (let i = 0; i < landmarks.length; i++) {
+                    const [x, y] = landmarks[i];
+                    if (i == 0) {
+                        changeInX.push(x);
+                        changeInY.push(y);
+                    } else if (i == landmarks.length - 1) {
+                        changeInX.push(x);
+                        changeInY.push(y);
+                    }
+                }
+
+                if (Math.abs(changeInX[0] - changeInX[1]) < 20 && Math.abs(changeInY[0] - changeInY[1]) <= 100) {
+                    if (!handClosed) {
+                        handClosed = true;
+                        handClosedStartTime = new Date().getTime();
+                    } else {
+                        const currentTime = new Date().getTime();
+                        if (currentTime - handClosedStartTime >= 500 && !pageTurned) {
+                            if (pageNum < pdfDoc.numPages) {
+                                pageNum++;
+                                openerWindow.postMessage({type: 'pageTurned', pageNum}, '*');
+                            } else {
+                                pageNum = 1;
+                            }
+                            renderPage(pageNum);
+                            console.log("closed, page turned");
+                            pageTurned = true;
+                        }
+                    }
+                } else {
+                    handClosed = false;
+                    pageTurned = false;
+                }
+            }
+        }
+        requestAnimationFrame(detectHands);
+    }
+
+    window.addEventListener('message', function (event) {
+        if (event.data.type === 'loadPDF') {
+            loadPDF(event.data.url);
+            backKeyword = event.data.backKeyword || backKeyword;
+            frontKeyword = event.data.frontKeyword || frontKeyword;
+        } else if (event.data.type === 'updateKeywords') {
+            backKeyword = event.data.backKeyword || backKeyword;
+            frontKeyword = event.data.frontKeyword || frontKeyword;
+        }
+    });
+
+    function toggleFullscreen() {
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            fullscreenButton.textContent = 'Unfullscreen';
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                fullscreenButton.textContent = 'Fullscreen';
+            }
+        }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        if (document.fullscreenElement) {
+            fullscreenButton.textContent = 'Unfullscreen';
+        } else {
+            fullscreenButton.textContent = 'Fullscreen';
+        }
+    });
+
+    document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
+
+    document.addEventListener('fullscreenchange', () => {
+        const video = document.getElementById('video');
+        if (document.fullscreenElement) {
+            video.style.width = '100%';
+            video.style.height = '100%';
+        } else {
+            video.style.width = '0';
+            video.style.height = '0';
+        }
+    });
+
+    loadModel();
+    window.addEventListener('beforeunload', function () {
+        opener.postMessage({type: 'pdfViewerClosed'}, '*');
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    });
+
+    startVideo();
+</script>
+</body>
+</html>
